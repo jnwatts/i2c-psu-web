@@ -1,0 +1,203 @@
+html {
+    --yellow: #ffcd47ff;
+    --yellow-transparent: #ffce4775;
+    --red: #ff6b6b;
+    /* --red: rgba(255, 255, 255, 0.479); */
+}
+
+body {
+    margin: 20px;
+    background-color: black;
+    color: var(--yellow);
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    grid-template-rows: min-content 1fr;
+    justify-items: stretch;
+    font-family: 'Inter', sans-serif;
+}
+
+.logo {
+    height: 50px;
+}
+
+/* left bar containing list of devices, yellow border */
+.device-container {
+    margin-top: 20px;
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+}
+
+.devices-header {
+    font-weight: 600;
+    margin-block-end: 1em;
+}
+
+.device-list {
+    border: 1px solid var(--yellow);
+    flex-grow: 1;
+    padding: 10px;
+}
+
+    .device-list > *:empty {
+        margin:0;
+    }
+
+    .device-list > * {
+        display: block;
+        margin-block-end: 10px;
+    }
+
+.add-device-button {
+    border: 1px dashed var(--yellow);
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    vertical-align: baseline;
+}
+
+    .add-device-button:hover {
+        background-color: var(--yellow);
+        color: black;
+    }
+
+
+serial-device {
+    padding: 10px;
+    display: grid;
+    justify-content: space-between;
+    grid-template-columns: min-content max-content min-content;
+    grid-template-rows: 1fr 1fr;
+    border: 1px solid var(--yellow);
+    margin-block-end: 10px;
+    grid-gap: 10px;
+}
+
+    serial-device .model-image {
+        grid-column: 1;
+        grid-row: 1;
+        width: 50px;
+        height: 50px;
+    } 
+
+    serial-device .device-info {
+        grid-column: 2;
+        grid-row: 1;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: min-content min-content;
+        grid-gap: 5px;
+        align-content: space-evenly;
+    }
+
+    serial-device .device-info .serial-number {
+        font-size: 8px;
+        opacity: 0.5;
+    }
+
+@keyframes marching-ants {
+    0% {
+        background-position: 0 0, 0 100%, 0 0, 100% 0;
+    }
+    100% {
+        background-position: 14px 0, -14px 100%, 0 -14px, 100% 14px;
+    }
+}
+
+    serial-device.discovering {
+        display: block;
+        text-align: center;
+        opacity: 0.5;        
+        border:1px solid transparent;
+        background-size: 7px 1px, 7px 1px, 1px 7px, 1px 7px;
+        background-position: 0 0, 0 100%, 0 0, 100% 0;
+        background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
+        animation: marching-ants 0.5s;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+        background-image:   linear-gradient(to right, var(--yellow) 50%, transparent 50%),
+                            linear-gradient(to right, var(--yellow) 50%, transparent 50%),
+                            linear-gradient(to bottom, var(--yellow) 50%, transparent 50%),
+                            linear-gradient(to bottom, var(--yellow) 50%, transparent 50%);
+    }
+
+    serial-device.unknown-device {
+        display: block;
+        text-align: center;
+        border: 1px solid var(--red);
+        color: var(--red);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+.warning-icon {
+    font-size: 20px;
+}
+
+.device-actions {
+    grid-column: 3;
+    grid-row: 1;
+    border-left: 1px dashed var(--yellow);
+    cursor: pointer;
+    display: flex;
+    justify-self: end;
+    padding: 7px;
+}
+
+    .device-actions:hover {
+        background-color: var(--yellow);
+    }
+
+    .device-actions .forget path {
+        stroke: var(--yellow);
+        fill: transparent;
+    }
+
+    .device-actions:hover .forget path {
+        stroke: black;
+
+    }
+
+.device-actions .forget {
+    width: 20px;
+}
+
+.measurements-5-ch {
+    grid-column: 1 / span 3;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: min-content;
+    grid-gap: 1px;
+    border-top: 1px solid var(--yellow-transparent);
+}
+
+    .measurements-5-ch .measurement {
+        padding-top: 6px;
+        flex-grow: 1;
+        border-right: 1px solid var(--yellow-transparent);
+        padding: 5px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: min-content min-content;
+        align-content: space-evenly;
+    }
+
+    .measurements-5-ch .measurement:last-child {
+        border-right: none;
+    }
+
+    .measurement-name {
+        font-size: 12px;
+        opacity: 0.7;
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .measurement-value {
+        font-size: 22px;
+        grid-column: span 2;
+        grid-row: 2;
+    }
