@@ -10,10 +10,11 @@ body {
     background-color: black;
     color: var(--yellow);
     display: grid;
-    grid-template-columns: 400px 1fr;
+    grid-template-columns: 1fr;
     grid-template-rows: min-content 1fr;
     justify-items: stretch;
     font-family: 'Inter', sans-serif;
+    font-feature-settings: "case", "ss02", "ss03", "ss04", "tnum", "calt" 0;
 }
 
 .logo {
@@ -35,26 +36,25 @@ body {
 }
 
 .device-list {
-    border: 1px solid var(--yellow);
+    display: flex;
+    flex-direction: row;
+    /* border: 1px solid var(--yellow); */
     flex-grow: 1;
-    padding: 10px;
+    /* padding: 10px; */
 }
 
-    .device-list > *:empty {
-        margin:0;
-    }
-
-    .device-list > * {
-        display: block;
-        margin-block-end: 10px;
-    }
+.add-device-container {
+    display: flex;
+    align-items: center;
+}
 
 .add-device-button {
     border: 1px dashed var(--yellow);
     padding: 10px;
     text-align: center;
     cursor: pointer;
-    vertical-align: baseline;
+    display: flex;
+    align-items: center;
 }
 
     .add-device-button:hover {
@@ -62,28 +62,33 @@ body {
         color: black;
     }
 
+serial-devices {
+    display: flex;
+}
 
 serial-device {
     padding: 10px;
     display: grid;
-    justify-content: space-between;
-    grid-template-columns: min-content max-content min-content;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: min-content min-content min-content 1fr;
     border: 1px solid var(--yellow);
-    margin-block-end: 10px;
     grid-gap: 10px;
+    margin-right: 10px;
 }
+    
+    .device-row {
+        display: grid;
+        grid-template-columns: min-content 1fr min-content;
+        grid-gap: 10px;
+    }
 
     serial-device .model-image {
         grid-column: 1;
-        grid-row: 1;
         width: 50px;
         height: 50px;
     } 
 
     serial-device .device-info {
         grid-column: 2;
-        grid-row: 1;
         display: grid;
         grid-template-columns: 1fr;
         grid-template-rows: min-content min-content;
@@ -109,7 +114,7 @@ serial-device {
         display: block;
         text-align: center;
         opacity: 0.5;        
-        border:1px solid transparent;
+        border:none;
         background-size: 7px 1px, 7px 1px, 1px 7px, 1px 7px;
         background-position: 0 0, 0 100%, 0 0, 100% 0;
         background-repeat: repeat-x, repeat-x, repeat-y, repeat-y;
@@ -120,10 +125,12 @@ serial-device {
                             linear-gradient(to right, var(--yellow) 50%, transparent 50%),
                             linear-gradient(to bottom, var(--yellow) 50%, transparent 50%),
                             linear-gradient(to bottom, var(--yellow) 50%, transparent 50%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 
     serial-device.unknown-device {
-        display: block;
         text-align: center;
         border: 1px solid var(--red);
         color: var(--red);
@@ -138,7 +145,6 @@ serial-device {
 
 .device-actions {
     grid-column: 3;
-    grid-row: 1;
     border-left: 1px dashed var(--yellow);
     cursor: pointer;
     display: flex;
@@ -164,11 +170,138 @@ serial-device {
     width: 20px;
 }
 
-.measurements-5-ch {
-    grid-column: 1 / span 3;
-    grid-row: 2;
+.params-container {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: 1fr min-content;
+    grid-template-rows: 1fr 1fr;
+    column-gap: 10px;
+}
+
+.vout-container, .iout-container {
+    grid-column: 1;
+    display: grid;
+    grid-template-columns: 1fr min-content;
+    grid-template-rows: min-content min-content;
+    grid-gap: 10px;
+    align-items: baseline;
+    border-right: 1px solid var(--yellow-transparent);
+    padding-right: 10px;
+}
+
+.iout-container {
+    grid-row: 2;
+}
+
+    .vout-container .vout-label, .iout-container .iout-label {
+        font-size: 18px;
+        opacity: 0.7;
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .vout-container .vout-value, .iout-container .iout-value {
+        font-size: 28px;
+        grid-column: 1;
+        grid-row: 2;
+        font-family: 'Logisoso';
+        font-size: 48px;
+        text-align: end;
+    }
+
+    .vout-container .vout-unit, .iout-container .iout-unit {
+        font-size: 18px;
+        opacity: 0.7;
+        grid-column: 2;
+        grid-row: 2;
+        font-weight: bold;
+    }
+
+.set-container {
+    grid-column: 2;
+    grid-row: span 2;
+    display: grid;
+}
+
+.vset-container {
+    display: grid;
+    grid-template-columns: min-content min-content;
+    position: relative;
+}
+
+.vset-ticks {
+    grid-column: 1;
+    display: grid;
+    align-items: center;
+    justify-items: end;
+    font-family: 'Logisoso';
+    color: var(--yellow-transparent);
+    margin-right: -20px;
+    padding-left: 12px;
+}
+
+.vslider {
+    grid-column: 2;
+    appearance: none;
+    writing-mode: vertical-rl;
+    background-color: transparent;
+    padding-left: 65px;
+    margin-left: -25px;
+    cursor: row-resize;
+}
+
+.vslider::-webkit-slider-runnable-track {
+    width: 4px;
+    background-color: var(--yellow-transparent);
+    padding-top: 8px;
+    padding-bottom: 17px;
+}
+
+.vslider:hover::-webkit-slider-runnable-track {
+    background-color: var(--yellow);
+}
+
+.vslider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 10px;
+    background-color: var(--yellow);
+}
+
+.range-value {
+    position: absolute;
+    background: var(--yellow);
+    width: 60px;
+    height: 24px;
+    pointer-events: none;
+    display: flex;
+}
+
+.range-value span {
+    flex-grow: 1;
+    line-height: 20px;
+    border:1px solid black;
+    text-align: center;
+    color: black;
+    display: block;
+    font-family: 'Logisoso';
+    margin: 1px;
+}
+
+.range-value span:before {
+    content: "";
+    position: absolute;
+    width: 13px;
+    height: 1px;
+    left:calc(100% + 7px);
+    top: calc(50% + 0.2px);
+    background-color: black;
+    margin-left: -5px;
+    margin-top: -1px;
+}
+
+.measurements-5-ch {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     grid-template-rows: min-content;
     grid-gap: 1px;
     border-top: 1px solid var(--yellow-transparent);
@@ -181,7 +314,7 @@ serial-device {
         padding: 5px;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: min-content min-content;
+        grid-template-rows: min-content 1fr;
         align-content: space-evenly;
     }
 
@@ -196,8 +329,16 @@ serial-device {
         grid-row: 1;
     }
 
+@font-face {
+    font-family: 'Logisoso';
+    src: url('/fonts/Logisoso.ttf');
+    font-weight: normal;
+    font-style: normal;
+}
+
     .measurement-value {
-        font-size: 22px;
+        font-family: 'Logisoso';
+        font-size: 28px;
         grid-column: span 2;
         grid-row: 2;
     }

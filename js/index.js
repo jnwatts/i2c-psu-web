@@ -80,6 +80,8 @@ class SerialDevice extends HTMLElement
     model = null;
     name = null;
     serialNumber = null;
+    vslider = null;
+    vsetValue = null;
 
     constructor(port)
     {
@@ -95,27 +97,48 @@ class SerialDevice extends HTMLElement
 
         this.innerHTML = '<span>Discovering device</span>';
 
-        await this.port.open({ baudRate: 115200 });
-
-        this.readSerial();
-
-        this.writeLine('id');
-
-        setTimeout(() =>
+        try
         {
-            if (this.classList.contains('discovering'))
+            await this.port.open({ baudRate: 115200 });
+
+            this.readSerial();
+
+            this.writeLine('id');
+
+            globalThis.write = this.writeLine.bind(this);
+
+            setTimeout(() =>
             {
-                this.classList.remove('discovering');
-                this.classList.add('unknown-device');
-
-                this.innerHTML = '<span class="warning-icon">⚠</span> <span>Unknown device</span>';
-
-                setTimeout(() =>
+                if (this.classList.contains('discovering'))
                 {
-                    this.port.forget();
-                }, 4000);
-            }
-        }, 4000);
+                    this.classList.remove('discovering');
+                    this.classList.add('unknown-device');
+
+                    this.innerHTML = '<span class="warning-icon">⚠</span> <span>Unknown device</span>';
+
+                    setTimeout(() =>
+                    {
+                        this.port.forget();
+                    }, 4000);
+                }
+            }, 4000);
+        }
+        catch (error)
+        {
+            console.log('error', error);
+
+            this.classList.remove('discovering');
+            this.classList.add('unknown-device');
+
+            this.innerHTML = `<span class="warning-icon">⚠</span> <span>Unable to connect to device</span>`;
+
+            this.port.forget();
+
+            setTimeout(() =>
+            {
+                this.parentElement.removeChild(this);
+            }, 4000);
+        }
     }
 
     async writeLine(line)
@@ -184,6 +207,58 @@ class SerialDevice extends HTMLElement
                                 });
 
                                 this.replaceChildren(clone);
+
+                                this.vslider = this.querySelector('.vslider');
+                                this.vsetValue = this.querySelector('.vset-value');
+
+                                this.vslider.addEventListener('input', e => {
+                                    this.writeLine(`vset,${e.target.value}`);
+                                });
+
+                                this.writeLine('vset');
+
+
+                            }
+                            else if (linePart.indexOf('vset,') === 0)
+                            {
+                                const vsetParts = linePart.split(',');
+
+                                this.vslider.value = vsetParts[1];
+
+                                const newValue = Number( (this.vslider.value - this.vslider.min) * 100 / (this.vslider.max - this.vslider.min) );
+                                const newPosition = 12 - (newValue * 0.39);
+                                this.vsetValue.innerHTML = `<span>${Number(this.vslider.value).toFixed(2)} V</span>`;
+                                this.vsetValue.style.bottom = `calc(${newValue}% + (${newPosition}px))`;
+                            }
+                            else if (linePart.indexOf('temp,') === 0)
+                            {
+                                const tempParts = linePart.trim().split(',');
+
+                                const measurements = this.querySelector('.measurements-5-ch');
+
+                                if (measurements)
+                                {
+                                    for (let i = 0; i < 5; i++)
+                                    {
+                                        const measurement = measurements.children[i];
+
+                                        if (measurement)
+                                        {
+                                            let val = Number(tempParts[i + 2]);
+                                            
+                                            // round to 1 decimal place
+                                            if (Math.abs(val) >= 100)
+                                                val = val.toFixed(1);
+                                            else
+                                                val = val.toFixed(2);
+
+                                            if (tempParts[i + 2] == '')
+                                                val = ' ';
+
+                                            measurement.querySelector('.measurement-value').innerText = val;
+                                        }
+                                    }
+                                }
                             }
                         });
                     }
