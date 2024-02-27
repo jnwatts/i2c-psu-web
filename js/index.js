@@ -81,6 +81,11 @@ class SerialDevice extends HTMLElement
     name = null;
     serialNumber = null;
 
+    reader = null;
+
+    encoder = new TextEncoder();
+    decoder = new TextDecoder();
+
     vsetSlider = null;
     vsetValue = null;
 
@@ -119,6 +124,8 @@ class SerialDevice extends HTMLElement
         try
         {
             await this.port.open({ baudRate: 115200 });
+
+            this.reader = this.port.readable.getReader();
 
             this.readSerial();
 
@@ -163,10 +170,7 @@ class SerialDevice extends HTMLElement
     async writeLine(line)
     {
         const writer = this.port.writable.getWriter();
-
-        const encoder = new TextEncoder();
-
-        await writer.write(encoder.encode(`${line}\n`));
+        await writer.write(this.encoder.encode(`${line}\n`));
 
         writer.releaseLock();
     }
@@ -177,20 +181,16 @@ class SerialDevice extends HTMLElement
 
         while(this.port.readable)
         {
-            const reader = this.port.readable.getReader();
-
             try
             {
                 while (true)
                 {
-                    const { value, done } = await reader.read();
+                    const { value, done } = await this.reader.read();
 
                     if (done)
                         break;
 
-                    const decoder = new TextDecoder();
-
-                    line += decoder.decode(value);
+                    line += this.decoder.decode(value);
 
                     if (line.indexOf('\n') !== -1)
                     {
