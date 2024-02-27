@@ -35,17 +35,26 @@
                 </div>
             </div>
             <div class="params-container">
-                <div class="vout-container">
-                    <div class="vout-label">Vout</div>
-                    <div class="vout-value">21.27</div>
-                    <div class="vout-unit">V</div>
-                </div>
-                <div class="iout-container">
-                    <div class="iout-label">Iout</div>
-                    <div class="iout-value">3.175</div>
-                    <div class="iout-unit">A</div>
+                <div class="out-container">
+                    <div class="out-label vout-label">VOLTAGE</div>
+                    <div class="out-mode vout-cv-mode">CV</div>
+                    <div class="out-value vout-value">--.--</div>
+                    <div class="out-unit vout-unit">V</div>
+                    <div class="out-label iout-label">CURRENT</div>
+                    <div class="out-mode iout-cc-mode">CC</div>
+                    <div class="out-value iout-value">-.---</div>
+                    <div class="out-unit iout-unit">A</div>
+                    <div class="out-label pout-label">POWER</div>
+                    <div class="out-mode"></div>
+                    <div class="out-value pout-value">--.--</div>
+                    <div class="out-unit pout-unit">W</div>
+                    <div class="out-label tout-label">TEMP</div>
+                    <div class="out-mode"></div>
+                    <div class="out-value tout-value">--.-</div>
+                    <div class="out-unit tout-unit">&deg;C</div>
                 </div>
                 <div class="set-container">
+                    <div class="set-label vset-label"><div>V<sub>SET</sub></div></div>
                     <div class="vset-container">
                         <datalist id="vset-values" class="vset-ticks">
                             <option value="20" label="20 V"></option>
@@ -54,23 +63,34 @@
                             <option value="5" label="5 V"></option>
                             <option value="0" label="0 V"></option>
                         </datalist>
-                        <div class="range-value vset-value"></div>
-                        <input type="range" class="vslider vset-slider" list="vset-values" min="0.8" max="20" step="0.01" value="0.8" />
+                        <div class="range-value left vset-value"></div>
+                        <input type="range" class="vert-slider left vset-slider" list="vset-values" min="0.8" max="20" step="0.01" value="0.8" />
+                    </div>
+                    <div class="set-label iset-label"><div>I<sub>SET</sub></div></div>
+                    <div class="iset-container">
+                        <datalist id="iset-values" class="iset-ticks">
+                            <option value="3" label="3 A"></option>
+                            <option value="2" label="2 A"></option>
+                            <option value="1" label="1 A"></option>
+                            <option value="0" label="0 A"></option>
+                        </datalist>
+                        <input type="range" class="vert-slider right iset-slider" list="iset-values" min="0" max="3" step="0.025" value="0" />
+                        <div class="range-value right iset-value"></div>
                     </div>
                 </div>
             </div>
-            <div class="measurements-5-ch">
-                <div class="measurement">
-                    <div class="measurement-name">T0</div>
-                    <div class="measurement-value">999.9</div>
+            <div class="states">
+                <div class="state relay-state">
+                    <div class="state-name">RELAY &bull;</div>
+                    <div class="state-value">--</div>
                 </div>
-                <div class="measurement">
-                    <div class="measurement-name">T1</div>
-                    <div class="measurement-value">999.9</div>
+                <div class="state output-state">
+                    <div class="state-name">OUTPUT &bull;</div>
+                    <div class="state-value">--</div>
                 </div>
-                <div class="measurement">
-                    <div class="measurement-name">T2</div>
-                    <div class="measurement-value">999.9</div>
+                <div class="state out-mode-state">
+                    <div class="state-name">MODE</div>
+                    <div class="state-value out-mode-value">--</div>
                 </div>
             </div>
         </template>
