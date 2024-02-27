@@ -421,7 +421,7 @@ class SerialDevice extends HTMLElement
             }
             finally
             {
-                reader.releaseLock();
+                this.reader.releaseLock();
             }
         }
 
