@@ -101,7 +101,7 @@ serial-device {
         grid-template-columns: 1fr;
         grid-template-rows: min-content min-content;
         grid-gap: 5px;
-        align-content: space-evenly;
+        align-content: center;
     }
 
     serial-device .device-info .serial-number {

@@ -32,13 +32,13 @@
      inkscape:showpageshadow="0"
      inkscape:deskcolor="#000000"
      inkscape:zoom="0.99218749"
-     inkscape:cx="186.96063"
-     inkscape:cy="512.50394"
-     inkscape:window-width="2560"
-     inkscape:window-height="1369"
-     inkscape:window-x="1912"
-     inkscape:window-y="-8"
-     inkscape:window-maximized="1"
+     inkscape:cx="528.12599"
+     inkscape:cy="658.14174"
+     inkscape:window-width="1652"
+     inkscape:window-height="1110"
+     inkscape:window-x="2129"
+     inkscape:window-y="208"
+     inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
   <defs
      id="defs2" />
@@ -63,7 +63,7 @@
        y="82.986443"
        ry="0" />
     <rect
-       style="fill:#ffcd47;fill-opacity:1;stroke:none;stroke-width:0.195613;stroke-linejoin:round"
+       style="fill:#ffcd47;fill-opacity:0.50234008;stroke:none;stroke-width:0.195613;stroke-linejoin:round;opacity:1"
        id="rect2"
        width="0.60868275"
        height="170.93333"
@@ -158,7 +158,7 @@
        y="135.53647"
        ry="0" />
     <rect
-       style="fill:#ffcd47;fill-opacity:1;stroke:none;stroke-width:0.195613;stroke-linejoin:round"
+       style="fill:#ffcd47;fill-opacity:0.50234008;stroke:none;stroke-width:0.195613;stroke-linejoin:round;opacity:1"
        id="rect2-4"
        width="0.6592381"
        height="170.93333"
