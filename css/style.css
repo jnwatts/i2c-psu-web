@@ -182,7 +182,7 @@ serial-device {
     display: grid;
     grid-template-columns: 1fr min-content;
     grid-template-rows: 1fr;
-    column-gap: 10px;
+    column-gap: 20px;
 }
 
 .out-container {
@@ -238,11 +238,13 @@ serial-device {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: min-content 1fr;
+    margin-right: 10px;
 }
 
 .set-label {
     display: grid;
     justify-content: center;
+    color: var(--yellow-transparent);
 }
 
 .set-label div {

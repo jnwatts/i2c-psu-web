@@ -234,7 +234,6 @@ class SerialDevice extends HTMLElement
                                     await this.writeLine(`vset,${e.target.value}`);
                                 });
 
-                                await this.writeLine('vset');
 
                                 this.isetSlider = this.querySelector('.iset-slider');
                                 this.isetValue = this.querySelector('.iset-value');
@@ -242,8 +241,6 @@ class SerialDevice extends HTMLElement
                                 this.isetSlider.addEventListener('input', async e => {
                                     await this.writeLine(`iset,${e.target.value}`);
                                 });
-
-                                await this.writeLine('iset');
 
                                 this.outModeCVIndicator = this.querySelector('.vout-cv-mode');
                                 this.outModeCCIndicator = this.querySelector('.iout-cc-mode');
@@ -255,14 +252,13 @@ class SerialDevice extends HTMLElement
                                     await this.writeLine(`relay,${this.stateRelay ? 'off' : 'on'}`);
                                 });
 
-                                await this.writeLine('relay');
                                 this.stateOutputIndicator = this.querySelector('.output-state');
                                 this.stateOutputIndicator.addEventListener('click', async e =>
                                 {
                                     await this.writeLine(`output,${this.stateOutput ? 'off' : 'on'}`);
                                 });
 
-                                await this.writeLine('output');
+                                this.getInitialState();
 
                                 const statusInterval = setInterval(async () =>
                                 {
@@ -388,6 +384,15 @@ class SerialDevice extends HTMLElement
                                                     this.outModeValue.innerText = this.outMode;
                                                 }
                                                 break;
+
+                                                case 'brownout':
+                                                {
+                                                    if (statusValue == 'true')
+                                                    {
+                                                        this.getInitialState();
+                                                    }
+                                                }
+                                                break;
                                             }
 
                                         }
@@ -441,6 +446,14 @@ class SerialDevice extends HTMLElement
     attributeChangedCallback(name, oldValue, newValue)
     {
         console.log(`Attribute: ${name} changed from ${oldValue} to ${newValue}`);
+    }
+
+    async getInitialState()
+    {
+        await this.writeLine('vset');
+        await this.writeLine('iset');
+        await this.writeLine('relay');
+        await this.writeLine('output');
     }
 
     updatePowerLabel()
