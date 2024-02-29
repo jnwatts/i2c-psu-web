@@ -286,7 +286,7 @@ class SerialDevice extends HTMLElement
                                     this.vsetSlider.value = vsetParts[1];
 
                                     const newValue = Number( (this.vsetSlider.value) * 100 / this.vsetSlider.max );
-                                    const newPosition = 3 - (newValue * 0.31);
+                                    const newPosition = 4 - (newValue * 0.32);
                                     this.vsetValue.innerHTML = `<span>${Number(this.vsetSlider.value).toFixed(2)} V</span>`;
                                     this.vsetValue.style.bottom = `calc(${newValue}% + (${newPosition}px))`;
                                 }
