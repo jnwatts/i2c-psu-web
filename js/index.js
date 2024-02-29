@@ -502,8 +502,13 @@ class SerialDevice extends HTMLElement
         this.querySelector('.alert-popup-message').innerText = message;
         this.querySelector('.alert-popup-overlay').style.display = 'flex';
 
+        this.querySelector('.vset-slider').disabled = true;
+        this.querySelector('.iset-slider').disabled = true;
+
         setTimeout(() =>
         {
+            this.querySelector('.vset-slider').disabled = this.stateLock;
+            this.querySelector('.iset-slider').disabled = this.stateLock;
             this.querySelector('.alert-popup-overlay').style.display = 'none';
         }, 4000);
     }
