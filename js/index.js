@@ -393,6 +393,7 @@ class SerialDevice extends HTMLElement
                                                 {
                                                     if (statusValue == 'true')
                                                     {
+                                                        this.showAlert('BROWNOUT');
                                                         this.getInitialState();
                                                     }
                                                 }
@@ -478,6 +479,17 @@ class SerialDevice extends HTMLElement
     updatePowerLabel()
     {
         this.querySelector('.pout-value').innerText = (this.vout * this.iout).toFixed(2);
+    }
+
+    showAlert(message)
+    {
+        this.querySelector('.alert-popup-message').innerText = message;
+        this.querySelector('.alert-popup-overlay').style.display = 'flex';
+
+        setTimeout(() =>
+        {
+            this.querySelector('.alert-popup-overlay').style.display = 'none';
+        }, 4000);
     }
 }
 
