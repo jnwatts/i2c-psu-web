@@ -59,6 +59,7 @@ body {
 }
 
 .add-device-button {
+    all: unset;
     border: 1px dashed var(--yellow);
     padding: 10px;
     text-align: center;
@@ -66,6 +67,11 @@ body {
     display: flex;
     align-items: center;
 }
+
+    .add-device-button:focus-visible {
+        outline: 2px dashed var(--yellow);
+        outline-offset: 4px;
+    }
 
     .add-device-button:hover {
         background-color: var(--yellow);
@@ -157,6 +163,7 @@ serial-device {
 }
 
 .device-actions {
+    all: unset;
     grid-column: 3;
     border-left: 1px dashed var(--yellow-transparent);
     cursor: pointer;
@@ -164,6 +171,11 @@ serial-device {
     justify-self: end;
     padding: 7px;
 }
+
+    .device-actions:focus-visible {
+        outline: 2px dashed var(--yellow);
+        outline-offset: 4px;
+    }
 
     .device-actions:hover {
         background-color: var(--yellow);
@@ -409,7 +421,8 @@ serial-device {
     border-top: 1px solid var(--yellow-transparent);
 }
 
-    .states .state {
+    .state {
+        all: unset;
         padding-top: 6px;
         flex-grow: 1;
         border-right: 1px solid var(--yellow-transparent);
@@ -418,10 +431,20 @@ serial-device {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: min-content 1fr;
         align-content: space-evenly;
+        cursor: pointer;
     }
 
-    .states .state:last-child {
+    .state:focus-visible {
+        outline: 2px dashed var(--yellow);
+        outline-offset: 4px;
+    }
+
+    .state:last-child {
         border-right: none;
+    }
+
+    .state:hover {
+        background-color: var(--yellow-transparent);
     }
 
     .state.active {
@@ -452,8 +475,4 @@ serial-device {
 
 .lock-value-img {
     padding-top:5px;
-}
-
-.relay-state, .output-state, .lock-state {
-    cursor: pointer;
 }
