@@ -94,10 +94,10 @@ class SerialDevice extends HTMLElement
 
     outModeCVIndicator = null;
     outModeCCIndicator = null;
-    outModeValue = null;
 
     stateRelayIndicator = null;
     stateOutputIndicator = null;
+    stateLockIndicator = null;
 
     vout = 0;
     iout = 0;
@@ -106,6 +106,7 @@ class SerialDevice extends HTMLElement
     outMode = 'CV';
     stateRelay = false;
     stateOutput = false;
+    stateLock = false;
 
     constructor(port)
     {
@@ -244,7 +245,6 @@ class SerialDevice extends HTMLElement
 
                                 this.outModeCVIndicator = this.querySelector('.vout-cv-mode');
                                 this.outModeCCIndicator = this.querySelector('.iout-cc-mode');
-                                this.outModeValue = this.querySelector('.out-mode-value');
 
                                 this.stateRelayIndicator = this.querySelector('.relay-state');
                                 this.stateRelayIndicator.addEventListener('click', async e =>
@@ -256,6 +256,12 @@ class SerialDevice extends HTMLElement
                                 this.stateOutputIndicator.addEventListener('click', async e =>
                                 {
                                     await this.writeLine(`output,${this.stateOutput ? 'off' : 'on'}`);
+                                });
+
+                                this.stateLockIndicator = this.querySelector('.lock-state');
+                                this.stateLockIndicator.addEventListener('click', async e =>
+                                {
+                                    await this.writeLine(`lock,${this.stateLock ? 'off' : 'on'}`);
                                 });
 
                                 this.getInitialState();
@@ -380,8 +386,6 @@ class SerialDevice extends HTMLElement
                                                         this.outModeCVIndicator.style.opacity = 1;
                                                         this.outModeCCIndicator.style.opacity = 0;
                                                     }
-
-                                                    this.outModeValue.innerText = this.outMode;
                                                 }
                                                 break;
 
@@ -413,6 +417,20 @@ class SerialDevice extends HTMLElement
                                     this.stateOutput = outputParts[1] === 'on';
                                     this.stateOutputIndicator.classList.toggle('active', this.stateOutput);
                                     this.stateOutputIndicator.querySelector('.state-value').innerText = this.stateOutput ? 'ON' : 'OFF';
+                                }
+                                else if (linePart.indexOf('lock,') === 0)
+                                {
+                                    const lockParts = linePart.split(',');
+                                    this.stateLock = lockParts[1] === 'on';
+                                    this.stateLockIndicator.classList.toggle('active', this.stateLock);
+
+                                    this.querySelector('.vset-slider').disabled = this.stateLock;
+                                    this.querySelector('.iset-slider').disabled = this.stateLock;
+
+                                    if (this.stateLock)
+                                        this.stateLockIndicator.querySelector('.lock-value-img').src = 'img/locked.svg';
+                                    else
+                                        this.stateLockIndicator.querySelector('.lock-value-img').src = 'img/unlocked.svg';
                                 }
                             }
                             
@@ -454,6 +472,7 @@ class SerialDevice extends HTMLElement
         await this.writeLine('iset');
         await this.writeLine('relay');
         await this.writeLine('output');
+        await this.writeLine('lock');
     }
 
     updatePowerLabel()

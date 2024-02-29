@@ -13,6 +13,11 @@ html {
     user-select: none;
 }
 
+*:focus-visible {
+    outline: 2px dashed var(--yellow);
+    outline-offset: 4px;
+}
+
 body {
     margin: 20px;
     background-color: black;
@@ -45,15 +50,12 @@ body {
 
 .device-list {
     display: flex;
-    flex-direction: row;
-    /* border: 1px solid var(--yellow); */
     flex-grow: 1;
-    /* padding: 10px; */
 }
 
 .add-device-container {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .add-device-button {
@@ -72,6 +74,7 @@ body {
 
 serial-devices {
     display: flex;
+    align-items: flex-start;
 }
 
 serial-device {
@@ -87,6 +90,8 @@ serial-device {
         display: grid;
         grid-template-columns: min-content 1fr min-content;
         grid-gap: 10px;
+        border-bottom: 1px solid var(--yellow-transparent);
+        padding-bottom: 5px;
     }
 
     serial-device .model-image {
@@ -153,7 +158,7 @@ serial-device {
 
 .device-actions {
     grid-column: 3;
-    border-left: 1px dashed var(--yellow);
+    border-left: 1px dashed var(--yellow-transparent);
     cursor: pointer;
     display: flex;
     justify-self: end;
@@ -213,12 +218,12 @@ serial-device {
 .out-mode {
     grid-column: 2;
     width: 20px;
-    height: 15px;
+    height: 16px;
     background-color: var(--yellow);
     align-self: center;
     color: black;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 15px;
     font-family: 'Logisoso';
     text-align: center;
     opacity: 0;
@@ -302,6 +307,10 @@ serial-device {
     cursor: row-resize;
 }
 
+.vert-slider:disabled {
+    cursor: not-allowed;
+}
+
 .vert-slider.left {
     grid-column: 2;
     padding-left: 65px;
@@ -330,7 +339,7 @@ serial-device {
     padding-bottom: 8px;
 }
 
-.vert-slider:hover::-webkit-slider-runnable-track {
+.vert-slider:enabled:hover::-webkit-slider-runnable-track {
     background-color: var(--yellow);
 }
 
@@ -397,7 +406,6 @@ serial-device {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: min-content;
-    grid-gap: 1px;
     border-top: 1px solid var(--yellow-transparent);
 }
 
@@ -419,6 +427,7 @@ serial-device {
     .state.active {
         background-color: var(--yellow);
         color: black;
+        border-right: 1px solid black;
     }
 
     .state.active .state-name {
@@ -441,6 +450,10 @@ serial-device {
         grid-row: 2;
     }
 
-.relay-state, .output-state {
+.lock-value-img {
+    padding-top:5px;
+}
+
+.relay-state, .output-state, .lock-state {
     cursor: pointer;
 }
