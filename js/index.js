@@ -285,8 +285,8 @@ class SerialDevice extends HTMLElement
 
                                     this.vsetSlider.value = vsetParts[1];
 
-                                    const newValue = Number( (this.vsetSlider.value - this.vsetSlider.min) * 100 / (this.vsetSlider.max - this.vsetSlider.min) );
-                                    const newPosition = 16 - (newValue * 0.43);
+                                    const newValue = Number( (this.vsetSlider.value) * 100 / this.vsetSlider.max );
+                                    const newPosition = 3 - (newValue * 0.31);
                                     this.vsetValue.innerHTML = `<span>${Number(this.vsetSlider.value).toFixed(2)} V</span>`;
                                     this.vsetValue.style.bottom = `calc(${newValue}% + (${newPosition}px))`;
                                 }
@@ -297,7 +297,7 @@ class SerialDevice extends HTMLElement
                                     this.isetSlider.value = isetParts[1];
 
                                     const newValue = Number( (this.isetSlider.value - this.isetSlider.min) * 100 / (this.isetSlider.max - this.isetSlider.min) );
-                                    const newPosition = 3 - (newValue * 0.305);
+                                    const newPosition = 3 - (newValue * 0.31);
                                     this.isetValue.innerHTML = `<span>${Number(this.isetSlider.value).toFixed(3)} A</span>`;
                                     this.isetValue.style.bottom = `calc(${newValue}% + (${newPosition}px)`;
                                 }
