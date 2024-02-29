@@ -99,6 +99,8 @@ class SerialDevice extends HTMLElement
     stateOutputIndicator = null;
     stateLockIndicator = null;
 
+    vset = 0;
+    iset = 0;
     vout = 0;
     iout = 0;
     pout = 0;
@@ -232,6 +234,8 @@ class SerialDevice extends HTMLElement
                                 this.vsetValue = this.querySelector('.vset-value');
 
                                 this.vsetSlider.addEventListener('input', async e => {
+                                    this.vset = e.target.value;
+                                    this.updateVsetRangeValue();
                                     await this.writeLine(`vset,${e.target.value}`);
                                 });
 
@@ -240,6 +244,8 @@ class SerialDevice extends HTMLElement
                                 this.isetValue = this.querySelector('.iset-value');
 
                                 this.isetSlider.addEventListener('input', async e => {
+                                    this.iset = e.target.value;
+                                    this.updateIsetRangeValue();
                                     await this.writeLine(`iset,${e.target.value}`);
                                 });
 
@@ -282,24 +288,18 @@ class SerialDevice extends HTMLElement
                                 if (linePart.indexOf('vset,') === 0)
                                 {
                                     const vsetParts = linePart.split(',');
+                                    this.vset = Number(vsetParts[1]);
 
                                     this.vsetSlider.value = vsetParts[1];
-
-                                    const newValue = Number( (this.vsetSlider.value) * 100 / this.vsetSlider.max );
-                                    const newPosition = 4 - (newValue * 0.32);
-                                    this.vsetValue.innerHTML = `<span>${Number(this.vsetSlider.value).toFixed(2)} V</span>`;
-                                    this.vsetValue.style.bottom = `calc(${newValue}% + (${newPosition}px))`;
+                                    this.updateVsetRangeValue();
                                 }
                                 else if (linePart.indexOf('iset,') === 0)
                                 {
                                     const isetParts = linePart.split(',');
+                                    this.iset = Number(isetParts[1]);
 
                                     this.isetSlider.value = isetParts[1];
-
-                                    const newValue = Number( (this.isetSlider.value - this.isetSlider.min) * 100 / (this.isetSlider.max - this.isetSlider.min) );
-                                    const newPosition = 3 - (newValue * 0.31);
-                                    this.isetValue.innerHTML = `<span>${Number(this.isetSlider.value).toFixed(3)} A</span>`;
-                                    this.isetValue.style.bottom = `calc(${newValue}% + (${newPosition}px)`;
+                                    this.updateIsetRangeValue();
                                 }
                                 else if (linePart.indexOf('status,') === 0)
                                 {
@@ -474,6 +474,22 @@ class SerialDevice extends HTMLElement
         await this.writeLine('relay');
         await this.writeLine('output');
         await this.writeLine('lock');
+    }
+
+    updateVsetRangeValue()
+    {
+        const newValue = Number( (this.vsetSlider.value) * 100 / this.vsetSlider.max );
+        const newPosition = 4 - (newValue * 0.32);
+        this.vsetValue.innerHTML = `<span>${Number(this.vsetSlider.value).toFixed(2)} V</span>`;
+        this.vsetValue.style.bottom = `calc(${newValue}% + (${newPosition}px))`;
+    }
+
+    updateIsetRangeValue()
+    {
+        const newValue = Number( (this.isetSlider.value - this.isetSlider.min) * 100 / (this.isetSlider.max - this.isetSlider.min) );
+        const newPosition = 3 - (newValue * 0.31);
+        this.isetValue.innerHTML = `<span>${Number(this.isetSlider.value).toFixed(3)} A</span>`;
+        this.isetValue.style.bottom = `calc(${newValue}% + (${newPosition}px)`;
     }
 
     updatePowerLabel()
