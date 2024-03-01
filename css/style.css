@@ -450,7 +450,7 @@ serial-device {
 
 .states {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     grid-template-rows: min-content;
     border-top: 1px solid var(--yellow-transparent);
 }
@@ -462,7 +462,6 @@ serial-device {
         border-right: 1px solid var(--yellow-transparent);
         padding: 5px;
         display: grid;
-        grid-template-columns: 1fr 1fr;
         grid-template-rows: min-content 1fr;
         align-content: space-evenly;
         cursor: pointer;
@@ -503,10 +502,9 @@ serial-device {
     .state-value {
         font-family: 'Logisoso';
         font-size: 28px;
-        grid-column: span 2;
         grid-row: 2;
     }
 
-.lock-value-img {
+.lock-value-img, .music-img {
     padding-top:5px;
 }

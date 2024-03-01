@@ -98,6 +98,7 @@ class SerialDevice extends HTMLElement
     stateRelayIndicator = null;
     stateOutputIndicator = null;
     stateLockIndicator = null;
+    statePlayIndicator = null;
 
     vset = 0;
     iset = 0;
@@ -269,6 +270,13 @@ class SerialDevice extends HTMLElement
                                 {
                                     await this.writeLine(`lock,${this.stateLock ? 'off' : 'on'}`);
                                 });
+
+                                this.statePlayIndicator = this.querySelector('.play-state');
+                                this.statePlayIndicator.addEventListener('click', async e =>
+                                {
+                                    await this.writeLine('play,5');
+                                });
+
 
                                 this.getInitialState();
 
