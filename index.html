@@ -18,11 +18,17 @@
             
         </div>
         <template id="serial-device-template">
-            <div class="alert-popup-overlay" disabled>
+            <div class="alert-popup-overlay">
                 <div class="alert-popup">
                     <div class="alert-popup-message">
                         
                     </div>
+                </div>
+            </div>
+            <div class="play-popup-overlay">
+                <div class="play-popup">
+                    <button class="play-file">FILE</button>
+                    <button class="play-stream">STREAM</button>
                 </div>
             </div>
             <div class="device-row">
@@ -101,7 +107,16 @@
                 </button>
                 <button class="state play-state">
                     <div class="state-name">PLAY &bull;</div>
-                    <div class="state-value play-value"><img class="music-img" src="img/music.svg" width="20px"/></div>
+                    <div class="state-value play-value">
+                        <img class="play-value-img" width="20px" src="img/music.svg" />
+                        <svg class="play-value-animation" xmlns="http://www.w3.org/2000/svg" 
+                            width="40px" height="20px"
+                            viewBox="5 0 40 20">
+                            <path id="wave" 
+                                fill="none">
+                            </path>
+                        </svg>
+                    </div>
                 </button>
             </div>
         </template>

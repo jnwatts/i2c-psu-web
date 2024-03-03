@@ -505,6 +505,67 @@ serial-device {
         grid-row: 2;
     }
 
-.lock-value-img, .music-img {
+.lock-value-img, .play-value-img, .play-value-animation {
     padding-top:5px;
 }
+
+.play-value-animation {
+    display: none;
+}
+
+#wave {
+    stroke-dasharray: 0 12 51 16;
+    animation: moveTheWave 1000ms linear infinite;
+    stroke: black;
+    /* stroke: var(--yellow); */
+    stroke-width: 3px;
+    stroke-linecap: round;
+}
+
+@keyframes moveTheWave {
+    0% {
+        stroke-dashoffset: 0;
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        stroke-dashoffset: -60;
+        transform: translate3d(-40px, 0, 0);
+    }
+}
+
+.play-popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+    .play-popup {
+        position: relative;
+    }
+
+    .play-popup button {
+        all: unset;
+        border: 1px solid var(--yellow);
+        padding: 10px;
+        margin: 10px;
+        text-align: center;
+        cursor: pointer;
+        width: 100px;
+    }
+
+    .play-popup button:focus-visible {
+        outline: 2px dashed var(--yellow);
+        outline-offset: 4px;
+    }
+
+    .play-popup button:hover {
+        background-color: var(--yellow);
+        color: black;
+    }

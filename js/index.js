@@ -110,6 +110,11 @@ class SerialDevice extends HTMLElement
     stateRelay = false;
     stateOutput = false;
     stateLock = false;
+    statePlay = false;
+
+    playWriter = null;
+    playStream = null;
+    playProcessor = null;
 
     constructor(port)
     {
@@ -271,12 +276,38 @@ class SerialDevice extends HTMLElement
                                     await this.writeLine(`lock,${this.stateLock ? 'off' : 'on'}`);
                                 });
 
+                                this.buildWave();
+
                                 this.statePlayIndicator = this.querySelector('.play-state');
                                 this.statePlayIndicator.addEventListener('click', async e =>
                                 {
-                                    await this.writeLine('play,5');
+                                    if (this.statePlay)
+                                    {
+                                        this.stop();
+                                    }
+                                    else
+                                    {
+
+                                        this.querySelector('.play-popup-overlay').style.display = 'flex';
+                                    }
                                 });
 
+                                this.querySelector('.play-popup-overlay').addEventListener('click', async e =>
+                                {
+                                    this.querySelector('.play-popup-overlay').style.display = 'none';
+                                });
+
+                                this.querySelector('.play-file').addEventListener('click', async e =>
+                                {
+                                    this.querySelector('.play-popup-overlay').style.display = 'none';
+                                    this.playFile();
+                                });
+
+                                this.querySelector('.play-stream').addEventListener('click', async e =>
+                                {
+                                    this.querySelector('.play-popup-overlay').style.display = 'none';
+                                    this.play();
+                                });
 
                                 this.getInitialState();
 
@@ -288,7 +319,8 @@ class SerialDevice extends HTMLElement
                                         return;
                                     }
 
-                                    await this.writeLine('status');
+                                    if (!this.statePlay)
+                                        await this.writeLine('status');
                                 }, 100);
                             }
                             else if (!this.classList.contains('discovering'))
@@ -457,6 +489,8 @@ class SerialDevice extends HTMLElement
             }
         }
 
+        this.stop();
+
         this.parentElement.removeChild(this);
     }
 
@@ -519,6 +553,259 @@ class SerialDevice extends HTMLElement
             this.querySelector('.iset-slider').disabled = this.stateLock;
             this.querySelector('.alert-popup-overlay').style.display = 'none';
         }, 4000);
+    }
+
+    buildWave()
+    {
+        const h = 20;
+
+        const path = document.querySelector('#wave');
+        const m = 0.512286623256592433;
+
+        const a = h / 2;
+        const y = h / 2;
+
+        const pathData = [
+        'M', 0, y + a / 2,
+        'c',
+        a * m, 0,
+        -(1 - a) * m, -a,
+        a, -a,
+        's',
+        -(1 - a) * m, a,
+        a, a,
+        's',
+        -(1 - a) * m, -a,
+        a, -a,
+        's',
+        -(1 - a) * m, a,
+        a, a,
+        's',
+        -(1 - a) * m, -a,
+        a, -a,
+
+        's',
+        -(1 - a) * m, a,
+        a, a,
+        's',
+        -(1 - a) * m, -a,
+        a, -a,
+        's',
+        -(1 - a) * m, a,
+        a, a,
+        's',
+        -(1 - a) * m, -a,
+        a, -a,
+        's',
+        -(1 - a) * m, a,
+        a, a,
+        's',
+        -(1 - a) * m, -a,
+        a, -a,
+        's',
+        -(1 - a) * m, a,
+        a, a,
+        's',
+        -(1 - a) * m, -a,
+        a, -a,
+        's',
+        -(1 - a) * m, a,
+        a, a,
+        's',
+        -(1 - a) * m, -a,
+        a, -a].
+        join(' ');
+
+        path.setAttribute('d', pathData);
+    }
+
+    async play()
+    {
+        const displayMediaOptions = {
+            video: {
+                displaySurface: "browser",
+            },
+            audio: {
+                suppressLocalAudioPlayback: true,
+                autoGainControl: false,
+                echoCancellation: false,
+                noiseSuppression: false,
+            },
+            preferCurrentTab: false,
+            selfBrowserSurface: "exclude",
+            systemAudio: "include",
+            surfaceSwitching: "include",
+            monitorTypeSurfaces: "include",
+        };
+
+        const audioCtx = new AudioContext({
+            sampleRate: 14300,
+            //sampleRate: 10265,
+            //sampleRate: 15305,
+        });
+
+        this.playStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+
+        const source = audioCtx.createMediaStreamSource(this.playStream);
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 3000;
+        filter.Q.value = 10;
+        this.playProcessor = audioCtx.createScriptProcessor(1024, 1, 1);
+        source.connect(filter);
+        filter.connect(this.playProcessor);
+        this.playProcessor.connect(audioCtx.destination);
+
+        await this.writeLine('play,5');
+        this.playWriter = this.port.writable.getWriter();
+
+        this.statePlay = true;
+        this.statePlayIndicator.classList.add('active');
+        this.statePlayIndicator.querySelector('.play-value-img').style.display = 'none';
+        this.statePlayIndicator.querySelector('.play-value-animation').style.display = 'block';
+
+        this.playProcessor.onaudioprocess = async e =>
+        {
+            const input = e.inputBuffer.getChannelData(0);
+
+            const uint8Data = Uint8Array.from(input.map(x => x * 127.5 + 127.5));
+
+            this.playWriter.write(uint8Data);
+        };
+
+        this.playStream.getTracks().forEach(tr => tr.onended = async () =>
+        {
+            this.stop();
+            this.playProcessor.disconnect();
+        });
+    }
+
+    async playFile()
+    {
+        // const audioData = await fetch("wav/anri.mp3").then(r => r.arrayBuffer());
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'audio/*';
+        fileInput.click();
+
+        fileInput.addEventListener('change', async e =>
+        {
+            const file = e.target.files[0];
+            const audioData = await file.arrayBuffer();
+
+            await this.playAudio(audioData);
+        });
+    }
+
+    async playAudio(audioData)
+    {
+        const audioCtx = new AudioContext({
+            sampleRate: 14300,
+        });
+
+        const decodedData = await audioCtx.decodeAudioData(audioData); // audio is resampled to the AudioContext's sampling rate
+
+        this.statePlay = true;
+        this.statePlayIndicator.classList.add('active');
+        this.statePlayIndicator.querySelector('.play-value-img').style.display = 'none';
+        this.statePlayIndicator.querySelector('.play-value-animation').style.display = 'block';
+
+        let buffer;
+
+        if (decodedData.numberOfChannels === 1)
+            buffer = decodedData.getChannelData(0);
+        else
+        {
+            // mix all of the channels into a single channel
+            const channels = Array.from({ length: decodedData.numberOfChannels }, (_, i) => decodedData.getChannelData(i));
+            const mixedChannel = channels[0];
+            for (let i = 0; i < decodedData.length; i++)
+            {
+                // making the values can't exceed 1 or -1, so we can convert to 8-bit unsigned integer later
+                for (let j = 1; j < channels.length; j++)
+                {
+                    mixedChannel[i] += channels[j][i];
+                }
+
+                mixedChannel[i] /= decodedData.numberOfChannels;
+            }
+
+            buffer = mixedChannel;
+        }
+
+        const uint8Data = Uint8Array.from(buffer.map(x => x * 127.5 + 127.5));
+
+        await this.writeLine('play,5');
+        this.playWriter = this.port.writable.getWriter();
+
+        const chunks = [];
+
+        for(let i = 0; i < uint8Data.length; i += 1024)
+        {
+            const chunk = uint8Data.slice(i, i + 1024);
+            chunks.push(chunk);
+        }
+
+        for(const chunk of chunks)
+        {
+            try {
+                await this.playWriter.write(chunk);
+            } catch (error) {
+                console.log('error', error);
+                break;
+            }
+        }
+
+        this.stop();
+    }
+
+    async stop()
+    {
+        try {
+            this.playStream.getTracks().forEach(tr => tr.stop());
+        } catch (error) {
+            console.log('error', error);
+        }
+
+        try {
+            this.playProcessor.disconnect();
+        } catch (error) {
+            console.log('error', error);
+        }
+
+        this.statePlay = false;
+        this.statePlayIndicator.querySelector('.play-value-img').style.display = 'block';
+        this.statePlayIndicator.querySelector('.play-value-animation').style.display = 'none';
+
+        this.statePlayIndicator.classList.remove('active');
+
+        try {
+            await this.playWriter.close();
+        } catch (error) {
+            console.log('error', error);
+        }
+
+        setTimeout(async () => {
+
+            try {
+                await this.playWriter.ready;
+            } catch (error) {
+                console.log('error', error);
+            }
+
+            try {
+                await this.playWriter.close();
+            } catch (error) {
+                console.log('error', error);
+            }
+
+            this.port.setSignals({ dataTerminalReady: false });
+            setTimeout(() => {
+                this.port.setSignals({ dataTerminalReady: true });
+                this.playWriter.releaseLock();
+            }, 100);
+        }, 100);
     }
 }
 
