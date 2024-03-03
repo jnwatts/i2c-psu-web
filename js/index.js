@@ -132,7 +132,10 @@ class SerialDevice extends HTMLElement
 
         try
         {
-            await this.port.open({ baudRate: 115200 });
+            await this.port.open({
+                baudRate: 115200,
+                bufferSize: 1024,
+            });
 
             this.reader = this.port.readable.getReader();
 
@@ -308,6 +311,8 @@ class SerialDevice extends HTMLElement
                                     this.querySelector('.play-popup-overlay').style.display = 'none';
                                     this.play();
                                 });
+
+                                globalThis.speed = this.speed.bind(this);
 
                                 this.getInitialState();
 
@@ -806,6 +811,36 @@ class SerialDevice extends HTMLElement
                 this.playWriter.releaseLock();
             }, 100);
         }, 100);
+    }
+
+    async speed()
+    {
+        await this.writeLine('speed');
+
+        const writer = this.port.writable.getWriter();
+
+        const buffer = new Uint8Array(1024);
+
+        for (let i = 0; i < buffer.length; i++)
+        {
+            buffer[i] = i;
+        }
+
+        for (let i = 0; i < 100; i++)
+        {
+            await writer.write(buffer);
+        }
+
+        await writer.releaseLock();
+
+        setTimeout(() => {
+            this.port.setSignals({ dataTerminalReady: false });
+            setTimeout(() => {
+                this.port.setSignals({ dataTerminalReady: true });
+            }, 100);
+        }, 100);
+        
+    
     }
 }
 
