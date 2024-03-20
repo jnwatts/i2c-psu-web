@@ -80,11 +80,16 @@ class SerialDevice extends HTMLElement
     model = null;
     name = null;
     serialNumber = null;
+    address = "00";
 
     reader = null;
 
     encoder = new TextEncoder();
     decoder = new TextDecoder();
+
+    command = null;
+    commands = [];
+    debugCommands = false;
 
     vsetSlider = null;
     vsetValue = null;
@@ -124,6 +129,74 @@ class SerialDevice extends HTMLElement
         this.classList.add('discovering');
     }
 
+    initDisplay()
+    {
+        if (!this.classList.contains('discovering')) {
+            return;
+        }
+        this.classList.remove('discovering');
+
+        const idParts = "0,bk1696,bk1696,".split(',');
+
+        this.model = idParts[1];
+        this.name = idParts[2];
+        this.serialNumber = idParts[3];
+
+        const template = document.getElementById('serial-device-template');
+
+        const clone = template.content.cloneNode(true);
+
+        clone.querySelector('.model-image').src = `img/devices/${this.model}.svg`;
+        clone.querySelector('.name').innerText = this.name;
+        clone.querySelector('.serial-number').innerText = this.serialNumber;
+
+        clone.querySelector('.device-actions').addEventListener('click', async e =>
+        {
+            this.port.forget();
+        });
+
+        this.replaceChildren(clone);
+
+        this.vsetSlider = this.querySelector('.vset-slider');
+        this.vsetValue = this.querySelector('.vset-value');
+
+        this.vsetSlider.addEventListener('input', async e => {
+            var v = parseFloat(e.target.value);
+            this.vset = v;
+            this.updateVsetRangeValue();
+            this.setVset(v);
+        });
+
+        this.voutValue = this.querySelector('.vout-value');
+
+        this.isetSlider = this.querySelector('.iset-slider');
+        this.isetValue = this.querySelector('.iset-value');
+
+        this.isetSlider.addEventListener('input', async e => {
+            var v = parseFloat(e.target.value);
+            this.iset = v;
+            this.updateIsetRangeValue();
+            this.setIset(v);
+        });
+
+        this.ioutValue = this.querySelector('.iout-value');
+
+        this.outModeCVIndicator = this.querySelector('.vout-cv-mode');
+        this.outModeCCIndicator = this.querySelector('.iout-cc-mode');
+
+        this.stateOutputIndicator = this.querySelector('.output-state');
+        this.stateOutputIndicator.addEventListener('click', async e =>
+        {
+            this.setOutput(!this.stateOutput);
+        });
+
+        this.stateLockIndicator = this.querySelector('.lock-state');
+        this.stateLockIndicator.addEventListener('click', async e =>
+        {
+            this.setLock(!this.stateLock);
+        });
+    }
+
     async connectedCallback()
     {
         console.log('my port is', this.port);
@@ -133,7 +206,7 @@ class SerialDevice extends HTMLElement
         try
         {
             await this.port.open({
-                baudRate: 115200,
+                baudRate: 9600,
                 bufferSize: 1024,
             });
 
@@ -157,9 +230,9 @@ class SerialDevice extends HTMLElement
                 }
             }, 4000);
 
-            await this.writeLine('id');
+            await this.getInitialState();
 
-            globalThis.write = this.writeLine.bind(this);
+            globalThis.write = this.writeCommand.bind(this);
         }
         catch (error)
         {
@@ -179,17 +252,61 @@ class SerialDevice extends HTMLElement
         }
     }
 
-    async writeLine(line)
+    pendingCommand(cmd)
     {
-        const writer = this.port.writable.getWriter();
-        await writer.write(this.encoder.encode(`${line}\n`));
+        return this.commands.find((c) => {
+            return c.cmd == cmd;
+        });
+    }
 
+    commLog(...args)
+    {
+        if (this.debugCommands) {
+            console.log(...args);
+        }
+    }
+
+    async writeCommand(cmd, args="")
+    {
+        cmd = cmd.toUpperCase();
+        if (this.command !== null) {
+            var c = this.pendingCommand(cmd);
+            if (c === undefined) {
+                this.commands.push({cmd: cmd, args: args, ts: Date.now()});
+            } else {
+                c.args = args;
+                this.commLog("UDPATE", cmd, args);
+            }
+            return;
+        }
+
+        this.command = cmd;
+
+        const writer = this.port.writable.getWriter();
+        var line = `${cmd}${this.address}${args}`
+        this.commLog("WRITE", line);
+        await writer.write(this.encoder.encode(`${line}\r`));
         writer.releaseLock();
+    }
+
+    async completeCommand()
+    {
+        this.commLog("COMPLETE", this.command);
+        this.command = null;
+        if (this.commands.length > 0) {
+            this.commands.sort((a, b) => {
+                return a.ts - b.ts;
+            });
+            var c = this.commands.shift();
+            this.commLog("SHIFT", c);
+            await this.writeCommand(c.cmd, c.args);
+        }
     }
 
     async readSerial()
     {
-        let line = '';
+        let buffer = '';
+        let lines = [];
 
         while(this.port.readable)
         {
@@ -199,294 +316,46 @@ class SerialDevice extends HTMLElement
                 {
                     const { value, done } = await this.reader.read();
 
-                    if (done)
+
+                    if (done) {
                         break;
+                    }
 
-                    line += this.decoder.decode(value);
 
-                    if (line.indexOf('\n') !== -1)
+                    buffer += this.decoder.decode(value);
+
+                    if (buffer.indexOf('\r') !== -1)
                     {
-                        const lineParts = line.split('\n');
+                        const newLines = buffer.split('\r');
+                        buffer = newLines.pop();
+                        lines.push(...newLines);
 
-                        line = lineParts.pop();
+                        if (this.command == null) {
+                            lines = [];
+                            continue;
+                        }
 
-                        lineParts.forEach(async linePart =>
-                        {
-                            console.log(linePart);
-
-                            if (linePart.indexOf('id,') === 0)
-                            {
-                                this.classList.remove('discovering');
-
-                                const idParts = linePart.split(',');
-
-                                this.model = idParts[1];
-                                this.name = idParts[2];
-                                this.serialNumber = idParts[3];
-
-                                const template = document.getElementById('serial-device-template');
-
-                                const clone = template.content.cloneNode(true);
-
-                                clone.querySelector('.model-image').src = `img/devices/${this.model}.svg`;
-                                clone.querySelector('.name').innerText = this.name;
-                                clone.querySelector('.serial-number').innerText = this.serialNumber;
-
-                                clone.querySelector('.device-actions').addEventListener('click', async e =>
-                                {
-                                    this.port.forget();
-                                });
-
-                                this.replaceChildren(clone);
-
-                                this.vsetSlider = this.querySelector('.vset-slider');
-                                this.vsetValue = this.querySelector('.vset-value');
-
-                                this.vsetSlider.addEventListener('input', async e => {
-                                    this.vset = e.target.value;
-                                    this.updateVsetRangeValue();
-                                    await this.writeLine(`vset,${e.target.value}`);
-                                });
-
-
-                                this.isetSlider = this.querySelector('.iset-slider');
-                                this.isetValue = this.querySelector('.iset-value');
-
-                                this.isetSlider.addEventListener('input', async e => {
-                                    this.iset = e.target.value;
-                                    this.updateIsetRangeValue();
-                                    await this.writeLine(`iset,${e.target.value}`);
-                                });
-
-                                this.outModeCVIndicator = this.querySelector('.vout-cv-mode');
-                                this.outModeCCIndicator = this.querySelector('.iout-cc-mode');
-
-                                this.stateRelayIndicator = this.querySelector('.relay-state');
-                                this.stateRelayIndicator.addEventListener('click', async e =>
-                                {
-                                    await this.writeLine(`relay,${this.stateRelay ? 'off' : 'on'}`);
-                                });
-
-                                this.stateOutputIndicator = this.querySelector('.output-state');
-                                this.stateOutputIndicator.addEventListener('click', async e =>
-                                {
-                                    await this.writeLine(`output,${this.stateOutput ? 'off' : 'on'}`);
-                                });
-
-                                this.stateLockIndicator = this.querySelector('.lock-state');
-                                this.stateLockIndicator.addEventListener('click', async e =>
-                                {
-                                    await this.writeLine(`lock,${this.stateLock ? 'off' : 'on'}`);
-                                });
-
-                                this.buildWave();
-
-                                this.statePlayIndicator = this.querySelector('.play-state');
-                                this.statePlayIndicator.addEventListener('click', async e =>
-                                {
-                                    if (this.statePlay)
-                                    {
-                                        this.stop();
-                                    }
-                                    else
-                                    {
-
-                                        this.querySelector('.play-popup-overlay').style.display = 'flex';
-                                    }
-                                });
-
-                                this.querySelector('.play-popup-overlay').addEventListener('click', async e =>
-                                {
-                                    this.querySelector('.play-popup-overlay').style.display = 'none';
-                                });
-
-                                this.querySelector('.play-file').addEventListener('click', async e =>
-                                {
-                                    this.querySelector('.play-popup-overlay').style.display = 'none';
-                                    this.playFile();
-                                });
-
-                                this.querySelector('.play-stream').addEventListener('click', async e =>
-                                {
-                                    this.querySelector('.play-popup-overlay').style.display = 'none';
-                                    this.play();
-                                });
-
-                                globalThis.speed = this.speed.bind(this);
-
-                                this.getInitialState();
-
-                                const statusInterval = setInterval(async () =>
-                                {
-                                    if (!this.port.writable)
-                                    {
-                                        clearInterval(statusInterval);
-                                        return;
-                                    }
-
-                                    if (!this.statePlay)
-                                        await this.writeLine('status');
-                                }, 100);
+                        var num_lines = lines.length; // lines will be modified in the loop
+                        for (let i = 0; i < num_lines; i++) {
+                            if (this.command == null) {
+                                this.commLog("Unexpected data", lines);
+                                lines = [];
+                                break;
                             }
-                            else if (!this.classList.contains('discovering'))
-                            {
-                                if (linePart.indexOf('vset,') === 0)
-                                {
-                                    const vsetParts = linePart.split(',');
-                                    this.vset = Number(vsetParts[1]);
 
-                                    this.vsetSlider.value = vsetParts[1];
-                                    this.updateVsetRangeValue();
-                                }
-                                else if (linePart.indexOf('iset,') === 0)
-                                {
-                                    const isetParts = linePart.split(',');
-                                    this.iset = Number(isetParts[1]);
+                            var linePart = lines.shift();
 
-                                    this.isetSlider.value = isetParts[1];
-                                    this.updateIsetRangeValue();
-                                }
-                                else if (linePart.indexOf('status,') === 0)
-                                {
-                                    const statusParts = linePart.split(',');
-                                    const statusScope = statusParts[1];
-                                    const statusParam = statusParts[2];
-                                    const statusValue = statusParts[3];
-
-                                    switch(statusScope)
-                                    {
-                                        case 'ina228':
-                                        {
-                                            switch(statusParam)
-                                            {
-                                                case 'vout':
-                                                {
-                                                    let vout = Number(statusValue);
-                                                    if (vout < 0)
-                                                        vout = 0;
-
-                                                    this.vout = vout;
-
-                                                    this.querySelector('.vout-value').innerText = vout.toFixed(2);
-                                                    this.updatePowerLabel();
-                                                }
-                                                break;
-
-                                                case 'iout':
-                                                {
-                                                    let iout = Number(statusValue);
-                                                    if (iout < 0)
-                                                        iout = 0;
-
-                                                    this.iout = iout;
-
-                                                    this.querySelector('.iout-value').innerText = iout.toFixed(3);
-                                                    this.updatePowerLabel();
-                                                }
-                                                break;
-                                            }
-                                        }
-                                        break;
-
-                                        case 'tmp100':
-                                        {
-                                            switch(statusParam)
-                                            {
-                                                case 'temp':
-                                                {
-                                                    let temp = Number(statusValue);
-
-                                                    this.tout = temp;
-
-                                                    this.querySelector('.tout-value').innerText = temp.toFixed(1);
-                                                
-                                                }
-                                                break;
-                                            }
-                                        }
-
-                                        case 'tps55289':
-                                        {
-                                            switch(statusParam)
-                                            {
-                                                // short circuit protection
-                                                case 'scp':
-                                                {
-                                                    
-                                                }
-                                                break;
-                                                
-                                                // over current protection
-                                                case 'ocp':
-                                                {
-                                                    if (statusValue == 'true')
-                                                    {
-                                                        this.outMode = 'CC';
-                                                        this.outModeCVIndicator.style.opacity = 0;
-                                                        this.outModeCCIndicator.style.opacity = 1;
-                                                    }
-                                                    else
-                                                    {
-                                                        this.outMode = 'CV';
-                                                        this.outModeCVIndicator.style.opacity = 1;
-                                                        this.outModeCCIndicator.style.opacity = 0;
-                                                    }
-                                                }
-                                                break;
-
-                                                case 'brownout':
-                                                {
-                                                    if (statusValue == 'true')
-                                                    {
-                                                        this.showAlert('BROWNOUT');
-                                                        this.getInitialState();
-                                                    }
-                                                }
-                                                break;
-                                            }
-
-                                        }
-                                        break;
-                                    }
-
-                                }
-                                else if (linePart.indexOf('relay,') === 0)
-                                {
-                                    const relayParts = linePart.split(',');
-                                    this.stateRelay = relayParts[1] === 'on';
-                                    this.stateRelayIndicator.classList.toggle('active', this.stateRelay);
-                                    this.stateRelayIndicator.querySelector('.state-value').innerText = this.stateRelay ? 'ON' : 'OFF';
-                                }
-                                else if (linePart.indexOf('output,') === 0)
-                                {
-                                    const outputParts = linePart.split(',');
-                                    this.stateOutput = outputParts[1] === 'on';
-                                    this.stateOutputIndicator.classList.toggle('active', this.stateOutput);
-                                    this.stateOutputIndicator.querySelector('.state-value').innerText = this.stateOutput ? 'ON' : 'OFF';
-                                }
-                                else if (linePart.indexOf('lock,') === 0)
-                                {
-                                    const lockParts = linePart.split(',');
-                                    this.stateLock = lockParts[1] === 'on';
-                                    this.stateLockIndicator.classList.toggle('active', this.stateLock);
-
-                                    this.querySelector('.vset-slider').disabled = this.stateLock;
-                                    this.querySelector('.iset-slider').disabled = this.stateLock;
-
-                                    if (this.stateLock)
-                                        this.stateLockIndicator.querySelector('.lock-value-img').src = 'img/locked.svg';
-                                    else
-                                        this.stateLockIndicator.querySelector('.lock-value-img').src = 'img/unlocked.svg';
-                                }
+                            this.commLog("READ", linePart);
+                            if (linePart == "OK" || linePart == "ERR") {
+                                await this.completeCommand();
+                                continue;
                             }
-                            
-                        });
+
+                            this.initDisplay();
+                            if (this.command == "GPAL") { this.handleGPAL(linePart); }
+                        }
                     }
                 }
-            }
-            catch (error)
-            {
-                console.log('error', error);
             }
             finally
             {
@@ -494,9 +363,116 @@ class SerialDevice extends HTMLElement
             }
         }
 
-        this.stop();
-
         this.parentElement.removeChild(this);
+    }
+
+    handleGPAL(val)
+    {
+        var binaryDecode = function(data) {
+            var p = "";
+            var float = false;
+            if (data.length & 1 == 1)
+                return null;
+            for (let i = 0; i < data.length; i += 2) {
+                var t = data[i].charCodeAt(0) - 0x30;
+                t <<= 4;
+                t |= data[i+1].charCodeAt(0) - 0x30;
+                var v = (t & 0x7F);
+                if (v == 0b0000000) { p += ' '; }
+                else if (v == 0b0111111) { p += '0'; }
+                else if (v == 0b0000110) { p += '1'; }
+                else if (v == 0b1011011) { p += '2'; }
+                else if (v == 0b1001111) { p += '3'; }
+                else if (v == 0b1100110) { p += '4'; }
+                else if (v == 0b1101101) { p += '5'; }
+                else if (v == 0b1111101) { p += '6'; }
+                else if (v == 0b0000111) { p += '7'; }
+                else if (v == 0b1111111) { p += '8'; }
+                else if (v == 0b1101111) { p += '9'; }
+                if (t & 0x80) { p += '.'; float = true; }
+            }
+            if (float) {
+                return parseFloat(p);
+            }
+            return parseInt(p);
+        };
+        var booleanDecode = function(data) {
+            // LED segment values are ACTIVE LOW!
+            // 0 == ENABLED
+            // 1 == DISABLED
+            return (data == 0);
+        };
+
+        var parseResponse = function(data, transforms) {
+            return transforms.map(function(t) {
+                var start = t[0] - 1;
+                var len = (t[1] === 0 ? 1 : t[1] - t[0] + 1);
+                var value = data.substr(start, len)
+                if (t[2] === null)
+                    return value;
+                return t[2](value);
+            });
+        };
+
+        var data = parseResponse(val, [
+            [1,  8,  binaryDecode],     // Voltage
+            [9,  0,  null],             // Reserved
+            [10, 17, binaryDecode],     // Current
+            [18, 0,  null],             // Reserved
+            [19, 26, binaryDecode],     // Power
+            [27, 0,  null],             // Reserved
+            [28, 31, binaryDecode],     // Minutes on Timer
+            [32, 35, binaryDecode],     // Seconds on Timer
+            [36, 0,  null],             // "Timer"
+            [37, 0,  null],             // ":"
+            [38, 0,  null],             // Reserved
+            [39, 0,  null],             // Reserved
+            [40, 45, binaryDecode],     // Setting Voltage
+            [46, 0,  booleanDecode],    // "V-const"
+            [47, 0,  null],             // "V-set"
+            [48, 0,  null],             // "V"
+            [49, 54, binaryDecode],     // Setting Current
+            [55, 0,  booleanDecode],    // "I-const"
+            [56, 0,  null],             // "I-set"
+            [57, 0,  null],             // "A"
+            [58, 59, binaryDecode],     // Program number
+            [60, 0,  null],             // "Program"
+            [61, 0,  null],             // Reserved
+            [62, 0,  null],             // "Setting"
+            [63, 0,  booleanDecode],    // Key Lock
+            [64, 0,  null],             // Key Unlock
+            [65, 0,  null],             // "Fault"
+            [66, 0,  booleanDecode],    // Output ON
+            [67, 0,  null],             // Output OFF
+            [68, 0,  null],             // Remote mode
+        ]);
+
+        var READING_VOLTAGE = 0;
+        var READING_CURRENT = 2;
+        var READING_POWER = 4;
+        var SETTING_VOLTAGE = 12;
+        var VCONST = 13;
+        var SETTING_CURRENT = 16;
+        var ICONST = 17;
+        var KEY_LOCK = 24;
+        var KEY_UNLOCK = 25;
+        var OUTPUT_ON = 27;
+        var OUTPUT_OFF = 28;
+
+        try {
+            this.updateVout(data[READING_VOLTAGE]);
+            this.updateVset(data[SETTING_VOLTAGE]);
+            this.updateIout(data[READING_CURRENT]);
+            this.updateIset(data[SETTING_CURRENT]);
+            this.updatePowerLabel();
+            this.updateOutputState(data[OUTPUT_ON]);
+            this.udpateLockState(data[KEY_LOCK]);
+            this.updateOutModeCV(data[VCONST]);
+            this.updateOutModeCC(data[ICONST]);
+        // } catch (e) {
+            // Don't worry about it, just try again on next round
+        } finally {
+        }
     }
 
     disconnectedCallback()
@@ -516,32 +492,125 @@ class SerialDevice extends HTMLElement
 
     async getInitialState()
     {
-        await this.writeLine('vset');
-        await this.writeLine('iset');
-        await this.writeLine('relay');
-        await this.writeLine('output');
-        await this.writeLine('lock');
+        await this.writeCommand('GPAL');
+        const statusInterval = setInterval(async () =>
+        {
+            if (!this.port.writable)
+            {
+                clearInterval(statusInterval);
+                return;
+            }
+
+            if (!this.statePlay)
+                await this.writeCommand('GPAL');
+        }, 100);
+    }
+
+    updateVset(val)
+    {
+        this.vset = val;
+        this.vsetSlider.value = val;
+        this.updateVsetRangeValue();
+    }
+
+    updateVout(val)
+    {
+        this.vout = val;
+        this.voutValue.innerHTML = val.toFixed(2).padStart(5, '\u00A0');
     }
 
     updateVsetRangeValue()
     {
         const newValue = Number( (this.vsetSlider.value) * 100 / this.vsetSlider.max );
         const newPosition = 4 - (newValue * 0.32);
-        this.vsetValue.innerHTML = `<span>${Number(this.vsetSlider.value).toFixed(2)} V</span>`;
+        this.vsetValue.innerHTML = `<span>${this.decimalDisplay(2,1,parseFloat(this.vsetSlider.value))} V</span>`;
         this.vsetValue.style.bottom = `calc(${newValue}% + (${newPosition}px))`;
+    }
+
+    updateIset(val)
+    {
+        this.iset = val;
+        this.isetSlider.value = val;
+        this.updateIsetRangeValue();
+    }
+
+    updateIout(val)
+    {
+        this.iout = val;
+        this.ioutValue.innerText = val.toFixed(3).substr(0, 5);
     }
 
     updateIsetRangeValue()
     {
         const newValue = Number( (this.isetSlider.value - this.isetSlider.min) * 100 / (this.isetSlider.max - this.isetSlider.min) );
         const newPosition = 3 - (newValue * 0.31);
-        this.isetValue.innerHTML = `<span>${Number(this.isetSlider.value).toFixed(3)} A</span>`;
+        this.isetValue.innerHTML = `<span>${this.decimalDisplay(1,2,parseFloat(this.isetSlider.value))} A</span>`;
         this.isetValue.style.bottom = `calc(${newValue}% + (${newPosition}px)`;
     }
 
     updatePowerLabel()
     {
-        this.querySelector('.pout-value').innerText = (this.vout * this.iout).toFixed(2);
+        var val = this.vout * this.iout;
+        this.querySelector('.pout-value').innerText = val.toFixed(3).substr(0, 5);
+    }
+
+    updateOutputState(val)
+    {
+        this.stateOutput = val;
+        this.stateOutputIndicator.classList.toggle('active', this.stateOutput);
+        this.stateOutputIndicator.querySelector('.state-value').innerText = this.stateOutput ? 'ON' : 'OFF';
+    }
+
+    udpateLockState(val)
+    {
+        this.stateLock = val;
+        this.stateLockIndicator.classList.toggle('active', this.stateLock);
+        if (this.stateLock)
+            this.stateLockIndicator.querySelector('.lock-value-img').src = 'img/locked.svg';
+        else
+            this.stateLockIndicator.querySelector('.lock-value-img').src = 'img/unlocked.svg';
+    }
+
+    updateOutModeCV(val)
+    {
+        this.outModeCV = val;
+        this.outModeCVIndicator.style.opacity = (!!val) ? 1 : 0;
+    }
+
+    updateOutModeCC(val)
+    {
+        this.outModeCC = val;
+        this.outModeCCIndicator.style.opacity = (!!val) ? 1 : 0;
+    }
+
+    setOutput(val)
+    {
+        this.writeCommand('SOUT', (!!val) ? '0' : '1'); // 0 == ON, 1 == OFF
+    }
+
+    setLock(val)
+    {
+        this.writeCommand((!!val) ? 'SESS' : 'ENDS'); // SESS == Disable front keypad for remote mode, ENDS == enable front keypad for local mode
+    }
+
+    setVset(val)
+    {
+        this.writeCommand('VOLT', this.decimalEncode(2,1,val));
+    }
+
+    setIset(val)
+    {
+        this.writeCommand('CURR', this.decimalEncode(1,2,val));
+    }
+
+    decimalDisplay(whole, part, data)
+    {
+        return data.toFixed(part).padStart(whole + part + 1, '0');
+    }
+
+    decimalEncode(whole, part, data)
+    {
+        return data.toFixed(part).padStart(whole + part + 1, '0').replace('.', '');
     }
 
     showAlert(message)
@@ -558,289 +627,6 @@ class SerialDevice extends HTMLElement
             this.querySelector('.iset-slider').disabled = this.stateLock;
             this.querySelector('.alert-popup-overlay').style.display = 'none';
         }, 4000);
-    }
-
-    buildWave()
-    {
-        const h = 20;
-
-        const path = document.querySelector('#wave');
-        const m = 0.512286623256592433;
-
-        const a = h / 2;
-        const y = h / 2;
-
-        const pathData = [
-        'M', 0, y + a / 2,
-        'c',
-        a * m, 0,
-        -(1 - a) * m, -a,
-        a, -a,
-        's',
-        -(1 - a) * m, a,
-        a, a,
-        's',
-        -(1 - a) * m, -a,
-        a, -a,
-        's',
-        -(1 - a) * m, a,
-        a, a,
-        's',
-        -(1 - a) * m, -a,
-        a, -a,
-
-        's',
-        -(1 - a) * m, a,
-        a, a,
-        's',
-        -(1 - a) * m, -a,
-        a, -a,
-        's',
-        -(1 - a) * m, a,
-        a, a,
-        's',
-        -(1 - a) * m, -a,
-        a, -a,
-        's',
-        -(1 - a) * m, a,
-        a, a,
-        's',
-        -(1 - a) * m, -a,
-        a, -a,
-        's',
-        -(1 - a) * m, a,
-        a, a,
-        's',
-        -(1 - a) * m, -a,
-        a, -a,
-        's',
-        -(1 - a) * m, a,
-        a, a,
-        's',
-        -(1 - a) * m, -a,
-        a, -a].
-        join(' ');
-
-        path.setAttribute('d', pathData);
-    }
-
-    async play()
-    {
-        const displayMediaOptions = {
-            video: {
-                displaySurface: "browser",
-            },
-            audio: {
-                suppressLocalAudioPlayback: true,
-                autoGainControl: false,
-                echoCancellation: false,
-                noiseSuppression: false,
-            },
-            preferCurrentTab: false,
-            selfBrowserSurface: "exclude",
-            systemAudio: "include",
-            surfaceSwitching: "include",
-            monitorTypeSurfaces: "include",
-        };
-
-        const audioCtx = new AudioContext({
-            sampleRate: 14300,
-            //sampleRate: 10265,
-            //sampleRate: 15305,
-        });
-
-        this.playStream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
-
-        const source = audioCtx.createMediaStreamSource(this.playStream);
-        const filter = audioCtx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 3000;
-        filter.Q.value = 10;
-        this.playProcessor = audioCtx.createScriptProcessor(1024, 1, 1);
-        source.connect(filter);
-        filter.connect(this.playProcessor);
-        this.playProcessor.connect(audioCtx.destination);
-
-        await this.writeLine('play,5');
-        this.playWriter = this.port.writable.getWriter();
-
-        this.statePlay = true;
-        this.statePlayIndicator.classList.add('active');
-        this.statePlayIndicator.querySelector('.play-value-img').style.display = 'none';
-        this.statePlayIndicator.querySelector('.play-value-animation').style.display = 'block';
-
-        this.playProcessor.onaudioprocess = async e =>
-        {
-            const input = e.inputBuffer.getChannelData(0);
-
-            const uint8Data = Uint8Array.from(input.map(x => x * 127.5 + 127.5));
-
-            this.playWriter.write(uint8Data);
-        };
-
-        this.playStream.getTracks().forEach(tr => tr.onended = async () =>
-        {
-            this.stop();
-            this.playProcessor.disconnect();
-        });
-    }
-
-    async playFile()
-    {
-        // const audioData = await fetch("wav/anri.mp3").then(r => r.arrayBuffer());
-
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = 'audio/*';
-        fileInput.click();
-
-        fileInput.addEventListener('change', async e =>
-        {
-            const file = e.target.files[0];
-            const audioData = await file.arrayBuffer();
-
-            await this.playAudio(audioData);
-        });
-    }
-
-    async playAudio(audioData)
-    {
-        const audioCtx = new AudioContext({
-            sampleRate: 14300,
-        });
-
-        const decodedData = await audioCtx.decodeAudioData(audioData); // audio is resampled to the AudioContext's sampling rate
-
-        this.statePlay = true;
-        this.statePlayIndicator.classList.add('active');
-        this.statePlayIndicator.querySelector('.play-value-img').style.display = 'none';
-        this.statePlayIndicator.querySelector('.play-value-animation').style.display = 'block';
-
-        let buffer;
-
-        if (decodedData.numberOfChannels === 1)
-            buffer = decodedData.getChannelData(0);
-        else
-        {
-            // mix all of the channels into a single channel
-            const channels = Array.from({ length: decodedData.numberOfChannels }, (_, i) => decodedData.getChannelData(i));
-            const mixedChannel = channels[0];
-            for (let i = 0; i < decodedData.length; i++)
-            {
-                // making the values can't exceed 1 or -1, so we can convert to 8-bit unsigned integer later
-                for (let j = 1; j < channels.length; j++)
-                {
-                    mixedChannel[i] += channels[j][i];
-                }
-
-                mixedChannel[i] /= decodedData.numberOfChannels;
-            }
-
-            buffer = mixedChannel;
-        }
-
-        const uint8Data = Uint8Array.from(buffer.map(x => x * 127.5 + 127.5));
-
-        await this.writeLine('play,5');
-        this.playWriter = this.port.writable.getWriter();
-
-        const chunks = [];
-
-        for(let i = 0; i < uint8Data.length; i += 1024)
-        {
-            const chunk = uint8Data.slice(i, i + 1024);
-            chunks.push(chunk);
-        }
-
-        for(const chunk of chunks)
-        {
-            try {
-                await this.playWriter.write(chunk);
-            } catch (error) {
-                console.log('error', error);
-                break;
-            }
-        }
-
-        this.stop();
-    }
-
-    async stop()
-    {
-        try {
-            this.playStream.getTracks().forEach(tr => tr.stop());
-        } catch (error) {
-            console.log('error', error);
-        }
-
-        try {
-            this.playProcessor.disconnect();
-        } catch (error) {
-            console.log('error', error);
-        }
-
-        this.statePlay = false;
-        this.statePlayIndicator.querySelector('.play-value-img').style.display = 'block';
-        this.statePlayIndicator.querySelector('.play-value-animation').style.display = 'none';
-
-        this.statePlayIndicator.classList.remove('active');
-
-        try {
-            await this.playWriter.close();
-        } catch (error) {
-            console.log('error', error);
-        }
-
-        setTimeout(async () => {
-
-            try {
-                await this.playWriter.ready;
-            } catch (error) {
-                console.log('error', error);
-            }
-
-            try {
-                await this.playWriter.close();
-            } catch (error) {
-                console.log('error', error);
-            }
-
-            this.port.setSignals({ dataTerminalReady: false });
-            setTimeout(() => {
-                this.port.setSignals({ dataTerminalReady: true });
-                this.playWriter.releaseLock();
-            }, 100);
-        }, 100);
-    }
-
-    async speed()
-    {
-        await this.writeLine('speed');
-
-        const writer = this.port.writable.getWriter();
-
-        const buffer = new Uint8Array(1024);
-
-        for (let i = 0; i < buffer.length; i++)
-        {
-            buffer[i] = i;
-        }
-
-        for (let i = 0; i < 100; i++)
-        {
-            await writer.write(buffer);
-        }
-
-        await writer.releaseLock();
-
-        setTimeout(() => {
-            this.port.setSignals({ dataTerminalReady: false });
-            setTimeout(() => {
-                this.port.setSignals({ dataTerminalReady: true });
-            }, 100);
-        }, 100);
-        
-    
     }
 }
 
