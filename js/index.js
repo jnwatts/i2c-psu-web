@@ -90,6 +90,7 @@ class SerialDevice extends HTMLElement
     command = null;
     commands = [];
     debugCommands = false;
+    statusUpdatePeriod = 100;
 
     vsetSlider = null;
     vsetValue = null;
@@ -504,7 +505,7 @@ class SerialDevice extends HTMLElement
 
             if (!this.statePlay)
                 await this.writeCommand('GPAL');
-        }, 100);
+        }, this.statusUpdatePeriod);
     }
 
     updateVset(val)
