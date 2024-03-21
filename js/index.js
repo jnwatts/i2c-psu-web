@@ -230,6 +230,8 @@ class SerialDevice extends HTMLElement
                 }
             }, 4000);
 
+            this.initDisplay();
+
             await this.getInitialState();
 
             globalThis.write = this.writeCommand.bind(this);
@@ -351,7 +353,6 @@ class SerialDevice extends HTMLElement
                                 continue;
                             }
 
-                            this.initDisplay();
                             if (this.command == "GPAL") { this.handleGPAL(linePart); }
                         }
                     }
