@@ -361,6 +361,9 @@ class SerialDevice extends HTMLElement
                             }
 
                             var linePart = lines.shift();
+                            if (!linePart) {
+                                break;
+                            }
 
                             this.commLog("READ", linePart);
                             if (linePart == "OK" || linePart == "ERR") {
