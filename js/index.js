@@ -88,7 +88,7 @@ class SerialDevice extends HTMLElement
     decoder = new TextDecoder();
 
     command = null;
-    commands = [];
+    commands = {};
     debugCommands = false;
     statusUpdatePeriod = 100;
 
@@ -255,11 +255,22 @@ class SerialDevice extends HTMLElement
         }
     }
 
+    isActiveCommand(cmd)
+    {
+        return (this.command?.cmd == cmd);
+    }
+
     pendingCommand(cmd)
     {
-        return this.commands.find((c) => {
-            return c.cmd == cmd;
-        });
+        if (!cmd) { return null; }
+        cmd = cmd.toUpperCase();
+        if (cmd in this.commands) {
+            return this.commands[cmd];
+        }
+        if (this.command?.cmd == cmd) {
+            return this.command;
+        }
+        return null;
     }
 
     commLog(...args)
@@ -271,22 +282,23 @@ class SerialDevice extends HTMLElement
 
     async writeCommand(cmd, args="")
     {
-        cmd = cmd.toUpperCase();
+        var c = {cmd: cmd.toUpperCase(), args: args, ts: Date.now()};
+
         if (this.command !== null) {
-            var c = this.pendingCommand(cmd);
-            if (c === undefined) {
-                this.commands.push({cmd: cmd, args: args, ts: Date.now()});
+            var p = this.pendingCommand(c.cmd);
+            if (p === null) {
+                this.commands[c.cmd] = c;
             } else {
-                c.args = args;
-                this.commLog("UDPATE", cmd, args);
+                p.args = c.args;
+                this.commLog("UDPATE", p.cmd, p.args);
             }
             return;
         }
 
-        this.command = cmd;
+        this.command = c;
 
         const writer = this.port.writable.getWriter();
-        var line = `${cmd}${this.address}${args}`
+        var line = `${c.cmd}${this.address}${c.args}`
         this.commLog("WRITE", line);
         await writer.write(this.encoder.encode(`${line}\r`));
         writer.releaseLock();
@@ -296,11 +308,13 @@ class SerialDevice extends HTMLElement
     {
         this.commLog("COMPLETE", this.command);
         this.command = null;
-        if (this.commands.length > 0) {
-            this.commands.sort((a, b) => {
+        var pendingCommands = Object.values(this.commands);
+        if (pendingCommands.length > 0) {
+            pendingCommands.sort((a, b) => {
                 return a.ts - b.ts;
             });
-            var c = this.commands.shift();
+            var c = pendingCommands.shift();
+            delete this.commands[c.cmd];
             this.commLog("SHIFT", c);
             await this.writeCommand(c.cmd, c.args);
         }
@@ -354,7 +368,7 @@ class SerialDevice extends HTMLElement
                                 continue;
                             }
 
-                            if (this.command == "GPAL") { this.handleGPAL(linePart); }
+                            if (this.isActiveCommand("GPAL")) { this.handleGPAL(linePart); }
                         }
                     }
                 }
