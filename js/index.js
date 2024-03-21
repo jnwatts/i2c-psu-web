@@ -522,8 +522,14 @@ class SerialDevice extends HTMLElement
         }, this.statusUpdatePeriod);
     }
 
+    isVsetPending()
+    {
+        return (this.pendingCommand('VOLT') !== null);
+    }
+
     updateVset(val)
     {
+        if (this.isVsetPending()) { return; }
         this.vset = val;
         this.vsetSlider.value = val;
         this.updateVsetRangeValue();
@@ -543,8 +549,14 @@ class SerialDevice extends HTMLElement
         this.vsetValue.style.bottom = `calc(${newValue}% + (${newPosition}px))`;
     }
 
+    isIsetPending()
+    {
+        return (this.pendingCommand('CURR') !== null);
+    }
+
     updateIset(val)
     {
+        if (this.isIsetPending()) { return; }
         this.iset = val;
         this.isetSlider.value = val;
         this.updateIsetRangeValue();
